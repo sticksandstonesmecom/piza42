@@ -1,6 +1,6 @@
 // The Auth0 client, initialized in configureClient()
 let auth0 = null;
-let userID = "";
+let order_history = null;
 
 const orderBig = async () => {
   try {
@@ -23,6 +23,10 @@ const orderBig = async () => {
     const responseElement = document.getElementById("api-order-result");
 
     responseElement.innerText = JSON.stringify(responseData, {}, 2);
+    
+    order_history = order_history + ",Big";
+    await setOrderHistory();
+    updateUI();
 
 } catch (e) {
     // Display errors in the console
@@ -51,12 +55,69 @@ const orderSmall = async () => {
     const responseElement = document.getElementById("api-order-result");
 
     responseElement.innerText = JSON.stringify(responseData, {}, 2);
+    
+    order_history = order_history + ",Small";
+    await setOrderHistory();
+    updateUI();
 
 } catch (e) {
     // Display errors in the console
     console.error(e);
   }
 };
+
+const getAceessTokenForManagementAPI = async () => {
+    let token;
+
+    const obj = {    
+        grant_type: 'client_credentials',
+        client_id: '02Q223b2AP07qj4bScDEfMaaB9us0riA',
+        client_secret: '1ES5GMDFwjTNobpgbu_iK9NlxOEBzzXLnlJQxha9S00htkhU4_CQA1qr29K-0fFr',
+        audience: 'https://dev-vrryb7c1.jp.auth0.com/api/v2/'};
+    const method = "POST";
+    const body = Object.keys(obj).map((key)=>key+"="+encodeURIComponent(obj[key])).join("&");
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'};
+        
+    await fetch("https://dev-vrryb7c1.jp.auth0.com/oauth/token", {method, headers, body})
+        .then((res)=> res.json())
+        .then(json => {token = json.access_token})
+        .catch(console.error);
+
+    return token;
+}
+
+async function getOrderHistory() {
+    const user = await auth0.getUser();
+    const token = await getAceessTokenForManagementAPI();
+
+    await fetch("https://dev-vrryb7c1.jp.auth0.com/api/v2/users/" + user.sub, 
+        {method: "GET", headers: {Authorization: `Bearer ${token}`}})
+        .then(response => response.json())
+        .then(json => {order_history = json.user_metadata.order_history;})
+        .catch(console.error);
+}
+
+async function setOrderHistory() {
+    const user = await auth0.getUser();
+    const token = await getAceessTokenForManagementAPI();
+    const new_history = order_history;
+
+    const data = {
+        user_metadata: {
+            order_history: new_history}};
+    const body = JSON.stringify(data);
+    
+    const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`};
+
+    await fetch("https://dev-vrryb7c1.jp.auth0.com/api/v2/users/" + user.sub, 
+        {method: "PATCH", headers, body})
+        .then(response => response.json())
+        .catch(console.error);
+}
 
 /**
  * Starts the authentication flow
@@ -168,7 +229,7 @@ window.onload = async () => {
 
   if (shouldParseResult) {
     console.log("> Parsing redirect");
-    try {
+
       const result = await auth0.handleRedirectCallback();
 
       if (result.appState && result.appState.targetUrl) {
@@ -177,19 +238,7 @@ window.onload = async () => {
 
       console.log("Logged in!");
 
-    const token = await auth0.getTokenSilently();
-    const user = await auth0.getUser();
-    
-    await fetch("https://dev-vrryb7c1.jp.auth0.com/api/v2/users/" + user.sub, {
-  method: "GET", headers: {Authorization: `Bearer ${token}`}
-}).then(response => response.text())
-.then(text => {
-  console.log(text);
-});      
-      
-    } catch (err) {
-      console.log("Error parsing redirect:", err);
-    }
+    await getOrderHistory();
 
     window.history.replaceState({}, document.title, "/");
   }

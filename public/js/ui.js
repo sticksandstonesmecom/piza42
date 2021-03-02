@@ -72,7 +72,7 @@ const updateUI = async () => {
         2
       );
       
-      document.getElementById("order-history").innerText = "";
+      document.getElementById("order-history").innerText = "Order History = " + order_history;
 
       document.querySelectorAll("pre code").forEach(hljs.highlightBlock);
 
