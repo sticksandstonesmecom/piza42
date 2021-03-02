@@ -66,6 +66,9 @@ const updateUI = async () => {
     if (isAuthenticated) {
       const user = await auth0.getUser();
 
+    document.getElementById("btn-order-big").disabled = !user.email_verified;
+    document.getElementById("btn-order-small").disabled = !user.email_verified;
+
       document.getElementById("profile-data").innerText = JSON.stringify(
         user,
         null,
